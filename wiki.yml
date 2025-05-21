@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment 
+metadata:
+  name: wiki-deployment
+spec:
+
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: wiki
+
+  template:
+    metadata:
+       name: wiki
+
+       labels:
+         app: wiki 
+
+    spec:
+      containers:
+        - name: wiki-container
+          image: ghcr.io/requarks/wiki:2
+          envFrom:
+            - secretRef:
+               name: wiki-secrets
+            - configMapRef:
+               name: wiki-vars
+
+
+          ports:
+            - name: db-port
+              containerPort: 3000
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              

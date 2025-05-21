@@ -1,0 +1,83 @@
+apiVersion: batch/v1
+kind: Job
+metadata: 
+   name: restore-job
+spec:
+
+
+  template:
+    metadata: 
+       name: restore
+    spec:
+      restartPolicy: Never
+
+      containers:
+        - name: restore-cont
+          image: mysql:5.7
+          command:
+              - "bash"
+              - "-c"
+              - |
+                echo "database $MYSQL_DATABASE $MYSQL_USER $MYSQL_PASSWORD "
+                RESTORE_FILE=/var/lib/backup/mysql-backup${RESTORE_DATE}.sql
+                echo mysql-backup${RESTORE_DATE}.sql
+              
+                ls -d /var/lib/backup/mysql-backup${RESTORE_DATE}.sql
+
+                if [[ ! -f $RESTORE_FILE  ]]; then
+                  echo  "restore file is not found.."
+                  exit 1
+                fi 
+
+
+                mysql -h mysql-service -u root -p$MYSQL_PASSWORD -D $MYSQL_DATABASE  < $RESTORE_FILE  2> restore_err
+          
+                if  [[   $? -eq 0  ]]; then
+                  echo "restore is done sucessfully"
+                else
+                  echo "Restore failed. Error log:"
+                  cat restore_err
+                fi
+
+          volumeMounts:
+            - name: mysql-backup
+              mountPath: /var/lib/backup 
+          
+          env:
+
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                    name: wiki-vars
+                    key: DB_NAME
+
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                   name: wiki-secrets
+                   key: DB_USER
+
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                 secretKeyRef:
+                     name: wiki-secrets
+                     key: DB_PASS
+
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                 secretKeyRef:
+                    name: wiki-secrets
+                    key: DB_PASS
+
+            - name: RESTORE_DATE
+              valueFrom:
+                configMapKeyRef:
+                   name: wiki-vars
+                   key: RESTORE_DATE 
+
+      volumes:
+
+        - name: mysql-backup
+          hostPath:
+            path: /home/minikube/mountBackups
+
